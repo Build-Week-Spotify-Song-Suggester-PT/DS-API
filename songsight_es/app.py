@@ -7,6 +7,7 @@ import spotipy
 import spotipy.oauth2 as oauth2
 from decouple import config
 
+
 def create_app():
     client_id = config('CLIENT_ID')
     client_secret = config('CLIENT_SECRET')
@@ -19,7 +20,6 @@ def create_app():
     credentials = oauth2.SpotifyClientCredentials(
             client_id=client_id,
             client_secret=client_secret)
-
 
     class Track(DB.Model):
         track_id = DB.Column(DB.String(50), primary_key=True)
@@ -62,12 +62,10 @@ def create_app():
         def __repr__(self):
             return json.dumps(self.to_dict())
 
-
     @app.route('/')
     def root():
         """Base view."""
         return 'Hello, world!'
-
 
     @app.route('/track')
     def track():
@@ -80,7 +78,6 @@ def create_app():
         results = spotify.track(track_id)
         return results
 
-
     @app.route('/audio_features')
     def audio_features():
         """Return audio features for track."""
@@ -91,7 +88,6 @@ def create_app():
                                     type=str)
         results = spotify.audio_features(track_id)
         return json.dumps(results)
-
 
     @app.route('/getlike')
     def getlike():
