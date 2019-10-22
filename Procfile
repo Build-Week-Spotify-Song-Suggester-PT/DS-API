@@ -1,1 +1,1 @@
-web: gunicorn songsight_es:APP -t 1200
+web: gunicorn song_suggester:APP -t 1200
