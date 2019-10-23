@@ -1,7 +1,8 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 import json
-import os
+import numpy as np
+import pickle
 import random
 import spotipy
 import spotipy.oauth2 as oauth2
@@ -15,30 +16,107 @@ def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
     DB = SQLAlchemy(app)
+    DB.Model.metadata.reflect(DB.engine)
 
-    spotify = spotipy.Spotify()
     credentials = oauth2.SpotifyClientCredentials(
             client_id=client_id,
             client_secret=client_secret)
 
+    tree = pickle.load(open('tree.p', 'rb'))
+
     class Track(DB.Model):
-        track_id = DB.Column(DB.String(50), primary_key=True)
-        track_name = DB.Column(DB.String(250))
-        artist_name = DB.Column(DB.String(100))
-        acousticness = DB.Column(DB.Float)
-        danceability = DB.Column(DB.Float)
-        duration_ms = DB.Column(DB.Integer)
-        energy = DB.Column(DB.Float)
-        instrumentalness = DB.Column(DB.Float)
-        key = DB.Column(DB.SmallInteger)
-        liveness = DB.Column(DB.Float)
-        loudness = DB.Column(DB.Float)
-        mode = DB.Column(DB.Boolean)
-        speechiness = DB.Column(DB.Float)
-        tempo = DB.Column(DB.Float)
-        time_signature = DB.Column(DB.SmallInteger)
-        valence = DB.Column(DB.Float)
-        popularity = DB.Column(DB.Integer)
+        __table__ = DB.Model.metadata.tables['track']
+
+        def to_array(self):
+            return np.array([self.acousticness_scaled,
+                             self.danceability_scaled,
+                             self.duration_ms_scaled,
+                             self.energy_scaled,
+                             self.instrumentalness_scaled,
+                             self.key_scaled,
+                             self.liveness_scaled,
+                             self.loudness_scaled,
+                             self.mode_scaled,
+                             self.speechiness_scaled,
+                             self.tempo_scaled,
+                             self.time_signature_scaled,
+                             self.valence_scaled,
+                             self.popularity_scaled,
+                             self.alternative_rnb,
+                             self.atl_hip_hop,
+                             self.banda,
+                             self.baroque,
+                             self.big_room,
+                             self.brostep,
+                             self.cali_rap,
+                             self.ccm,
+                             self.chamber_pop,
+                             self.chillhop,
+                             self.classical,
+                             self.classical_era,
+                             self.contemporary_country,
+                             self.dance_pop,
+                             self.early_music,
+                             self.early_romantic_era,
+                             self.edm,
+                             self.electro_house,
+                             self.electropop,
+                             self.emo_rap,
+                             self.folk_pop,
+                             self.gangster_rap,
+                             self.german_baroque,
+                             self.grupera,
+                             self.hip_hop,
+                             self.indie_folk,
+                             self.indie_pop,
+                             self.indie_poptimism,
+                             self.indie_rnb,
+                             self.indie_rock,
+                             self.indie_soul,
+                             self.indietronica,
+                             self.k_pop,
+                             self.latin,
+                             self.lo_fi_beats,
+                             self.mellow_gold,
+                             self.melodic_rap,
+                             self.modern_rock,
+                             self.neo_mellow,
+                             self.norteno,
+                             self.pop,
+                             self.pop_edm,
+                             self.pop_rap,
+                             self.pop_rock,
+                             self.post_teen_pop,
+                             self.progressive_house,
+                             self.progressive_trance,
+                             self.ranchera,
+                             self.rap,
+                             self.regional_mexican,
+                             self.regional_mexican_pop,
+                             self.rock,
+                             self.sleep,
+                             self.soft_rock,
+                             self.southern_hip_hop,
+                             self.stomp_and_holler,
+                             self.trance,
+                             self.trap_music,
+                             self.tropical_house,
+                             self.underground_hip_hop,
+                             self.uplifting_trance,
+                             self.vapor_trap,
+                             self.classical_super,
+                             self.country_super,
+                             self.folk_super,
+                             self.house_super,
+                             self.indian_super,
+                             self.indie_super,
+                             self.jazz_super,
+                             self.latin_super,
+                             self.metal_super,
+                             self.rap_super,
+                             self.reggae_super,
+                             self.rock_super,
+                             self.worship_super])
 
         def to_dict(self):
             return {'track_id': self.track_id,
@@ -91,19 +169,33 @@ def create_app():
 
     @app.route('/getlike')
     def getlike():
-        """Return info for seed track and n random tracks."""
+        """Return info for seed track and n nearest neighbors."""
         seed = request.args.get('seed',
                                 default='0DpOKHtemH6UMhVGKXY6DJ',
                                 type=str)
         num = request.args.get('num', default=10, type=int)
 
         q1 = Track.query.filter(Track.track_id == seed).first()
+        dist, ind = tree.query(q1.to_array().reshape(1, -1), k=num+1)
+        indices = [val.item() for val in ind[0]]
 
-        q2 = Track.query.filter(Track.track_id != seed)
-        rowCount = int(q2.count())
-        randomRows = q2.offset(int(rowCount*random.random())).limit(num)
-        similar_tracks = [(row) for row in randomRows]
+        q2 = Track.query.filter(Track.id.in_(indices))
+        q2 = q2.filter(Track.track_id != seed).all()
 
-        return f'{{"seed": {q1}, "results": {similar_tracks}}}'
+        return f'{{"seed": {q1}, "results": {q2}}}'
+
+    @app.route('/getrandom')
+    def getrandom():
+        """Return info for n random tracks from top m by feature."""
+        feature = request.args.get('feature', default='popularity', type=str)
+        num = request.args.get('num', default=10, type=int)
+        top = request.args.get('top', default=10, type=int)
+
+        q = Track.query.order_by(eval(f'Track.{feature}.desc()')).limit(top)
+        rowCount = int(q.count())
+        randomRows = q.offset(int(rowCount*random.random())).limit(num)
+        tracks = [(row) for row in randomRows]
+
+        return f'{{"results": {tracks}}}'
 
     return app
