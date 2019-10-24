@@ -1,12 +1,17 @@
-from flask import Flask, request
-from flask_sqlalchemy import SQLAlchemy
+import io
 import json
 import numpy as np
+import pandas as pd
 import pickle
 import random
 import spotipy
 import spotipy.oauth2 as oauth2
+
 from decouple import config
+from flask import Flask, Response, request
+from flask_sqlalchemy import SQLAlchemy
+from matplotlib.backends.backend_svg import FigureCanvasSVG
+from matplotlib.figure import Figure
 
 
 def create_app():
@@ -223,5 +228,43 @@ def create_app():
         tracks = [(row) for row in randomRows]
 
         return f'{{"results": {tracks}}}'
+
+    @app.route('/compare')
+    def compare():
+        """Return a visual comparison of two tracks."""
+        label_a = request.args.get('label_a', default='', type=str)
+        label_b = request.args.get('label_b', default='', type=str)
+        track_a = request.args.get('track_a',
+                                   default='5w9c2J52mkdntKOmRLeM2m',
+                                   type=str)
+        track_b = request.args.get('track_b',
+                                   default='5w9c2J52mkdntKOmRLeM2m',
+                                   type=str)
+
+        q1 = Track.query.filter(Track.track_id == track_a).first()
+        q2 = Track.query.filter(Track.track_id == track_b).first()
+
+        df = pd.DataFrame([q1.to_dict(), q2.to_dict()])
+
+        # Re-order columns.
+        df = df[['track_id', 'track_name', 'artist_name', 'mode',
+                 'danceability', 'energy', 'instrumentalness', 'liveness',
+                 'speechiness', 'valence']]
+
+        if(label_a == ''):
+            label_a = '{} - {}'.format(df.loc[0]['artist_name'],
+                                       df.loc[0]['track_name'])
+        if(label_b == ''):
+            label_b = '{} - {}'.format(df.loc[0]['artist_name'],
+                                       df.loc[0]['track_name'])
+
+        fig = Figure()
+        axis = fig.add_subplot(1, 1, 1)
+        x_points = range(5)
+        axis.plot(x_points, [random.randint(1, 30) for x in x_points])
+
+        output = io.BytesIO()
+        FigureCanvasSVG(fig).print_svg(output)
+        return Response(output.getvalue(), mimetype="image/svg+xml")
 
     return app
