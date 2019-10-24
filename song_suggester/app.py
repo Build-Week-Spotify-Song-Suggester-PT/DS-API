@@ -174,91 +174,16 @@ def create_app():
         max_range = request.args.get('max', type=float)
 
         tracks = {}
-        if audio_feature == 'acousticness':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.acousticness > min_range) & (Track.acousticness < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.acousticness > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.acousticness < max_range).all()
-        elif audio_feature == 'danceability':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.danceability > min_range) & (Track.danceability < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.danceability > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.danceability < max_range).all()
-        elif audio_feature == 'duration_ms':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.duration_ms > min_range) & (Track.duration_ms < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.duration_ms > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.duration_ms < max_range).all()
-        elif audio_feature == 'energy':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.energy > min_range) & (Track.energy < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.energy > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.energy < max_range).all()
-        elif audio_feature == 'instrumentalness':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.instrumentalness > min_range) & (Track.instrumentalness < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.instrumentalness > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.instrumentalness < max_range).all()
-        elif audio_feature == 'key':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.key > min_rage) & (Track.key < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.key > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.key < max_range).all()
-        elif audio_feature == 'liveness':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.liveness > min_range) & (Track.liveness < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.liveness > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.liveness < max_range).all()
-        elif audio_feature == 'loudness':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.loudness > min_range) & (Track.loudness < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.loudness > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.loudness < max_range).all()
-        elif audio_feature == 'speechiness':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.speechiness > min_range) & (Track.speechiness < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.speechiness > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.speechiness < max_range).all()
-        elif audio_feature == 'tempo':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.tempo > min_range) & (Track.tempo < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.tempo > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.tempo < max_range).all()
-        elif audio_feature == 'valence':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.valence > min_range) & (Track.valence < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.valence > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.valence < max_range).all()
-        elif audio_feature == 'popularity':
-            if min_range and max_range:
-                tracks = Track.query.filter((Track.popularity > min_range) & (Track.popularity < max_range)).all()
-            elif min_range:
-                tracks = Track.query.filter(Track.popularity > min_range).all()
-            elif max_range:
-                tracks = Track.query.filter(Track.popularity < max_range).all()
-
+        if min_range and max_range:
+            condition = (f'(Track.{audio_feature} >= min_range) & '
+                         f'(Track.{audio_feature} <= max_range)')
+            tracks = Track.query.filter(eval(condition)).all()
+        elif min_range:
+            condition = f'Track.{audio_feature} >= min_range'
+            tracks = Track.query.filter(eval(condition)).all()
+        elif max_range:
+            condition = f'Track.{audio_feature} <= max_range'
+            tracks = Track.query.filter(eval(condition)).all()
 
         return str(tracks)
 
