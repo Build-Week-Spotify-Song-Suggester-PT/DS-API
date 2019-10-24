@@ -189,9 +189,15 @@ def create_app():
         """Return info for n random tracks from top m by feature."""
         feature = request.args.get('feature', default='popularity', type=str)
         num = request.args.get('num', default=10, type=int)
-        top = request.args.get('top', default=10, type=int)
+        top = request.args.get('top', default=100, type=int)
+        order = request.args.get('order', default='desc', type=str)
 
-        q = Track.query.order_by(eval(f'Track.{feature}.desc()')).limit(top)
+        if order.lower() == 'asc':
+            q = Track.query.order_by(eval(f'Track.{feature}')).limit(top)
+        else:
+            q = Track.query.order_by(eval(f'Track.{feature}.desc()'))
+            q = q.limit(top)
+
         rowCount = int(q.count())
         randomRows = q.offset(int(rowCount*random.random())).limit(num)
         tracks = [(row) for row in randomRows]
