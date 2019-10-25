@@ -306,7 +306,7 @@ def create_app():
         ax.fill(angles, values, 'r', alpha=0.1)
 
         # Add legend
-        ax.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+        ax.legend(loc='best')
 
         output = io.BytesIO()
         FigureCanvasSVG(fig).print_svg(output)
