@@ -10,6 +10,7 @@ import spotipy.oauth2 as oauth2
 from decouple import config
 from flask import Flask, Response, request
 from flask_sqlalchemy import SQLAlchemy
+from math import pi
 from matplotlib.backends.backend_svg import FigureCanvasSVG
 from matplotlib.figure import Figure
 
@@ -235,7 +236,7 @@ def create_app():
         label_a = request.args.get('label_a', default='', type=str)
         label_b = request.args.get('label_b', default='', type=str)
         track_a = request.args.get('track_a',
-                                   default='5w9c2J52mkdntKOmRLeM2m',
+                                   default='1IVJDJy9rWFAynjhta7l2J',
                                    type=str)
         track_b = request.args.get('track_b',
                                    default='5w9c2J52mkdntKOmRLeM2m',
@@ -255,13 +256,57 @@ def create_app():
             label_a = '{} - {}'.format(df.loc[0]['artist_name'],
                                        df.loc[0]['track_name'])
         if(label_b == ''):
-            label_b = '{} - {}'.format(df.loc[0]['artist_name'],
-                                       df.loc[0]['track_name'])
+            label_b = '{} - {}'.format(df.loc[1]['artist_name'],
+                                       df.loc[1]['track_name'])
 
+        # ------- PART 1: Create background
+
+        # number of variables
+        categories = list(df)[4:]
+        N = len(categories)
+
+        # What will be the angle of each axis in the plot?
+        # Divide the plot according to the number of variables.
+        angles = [n / float(N) * 2 * pi for n in range(N)]
+        angles += angles[:1]
+
+        # Initialise the radar plot.
         fig = Figure()
-        axis = fig.add_subplot(1, 1, 1)
-        x_points = range(5)
-        axis.plot(x_points, [random.randint(1, 30) for x in x_points])
+        ax = fig.add_subplot(111, polar=True)
+
+        # Put the first axis to top.
+        ax.set_theta_offset(pi / 2)
+        ax.set_theta_direction(-1)
+
+        # Draw one axis per variable and label each.
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(categories)
+
+        # Draw ylabels
+        ax.set_rlabel_position(0)
+        ax.set_yticks([0.25, 0.50, 0.75])
+        ax.set_yticklabels(['0.25', '0.50', '0.75'])
+        ax.set_ylim(0, 1)
+
+        # ------- PART 2: Add polygons.
+
+        # Plot each track (each row of the dataframe).
+        drop_cols = ['track_id', 'track_name', 'artist_name', 'mode']
+
+        # Track 1
+        values = df.loc[0].drop(drop_cols).values.flatten().tolist()
+        values += values[:1]
+        ax.plot(angles, values, linewidth=1, linestyle='solid', label=label_a)
+        ax.fill(angles, values, 'b', alpha=0.1)
+
+        # Track 2
+        values = df.loc[1].drop(drop_cols).values.flatten().tolist()
+        values += values[:1]
+        ax.plot(angles, values, linewidth=1, linestyle='solid', label=label_b)
+        ax.fill(angles, values, 'r', alpha=0.1)
+
+        # Add legend
+        ax.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
 
         output = io.BytesIO()
         FigureCanvasSVG(fig).print_svg(output)
