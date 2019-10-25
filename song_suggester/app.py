@@ -175,7 +175,9 @@ def create_app():
 
     @app.route('/get_range')
     def get_range():
-        audio_feature = request.args.get('audio_feature', type=str)
+        audio_feature = request.args.get('audio_feature',
+                                         default='acousticness',
+                                         type=str)
         min_range = request.args.get('min', type=float)
         max_range = request.args.get('max', type=float)
 
@@ -193,8 +195,8 @@ def create_app():
 
         return str(tracks)
 
-    @app.route('/getlike')
-    def getlike():
+    @app.route('/get_like')
+    def get_like():
         """Return info for seed track and n nearest neighbors."""
         seed = request.args.get('seed',
                                 default='0DpOKHtemH6UMhVGKXY6DJ',
@@ -210,8 +212,8 @@ def create_app():
 
         return f'{{"seed": {q1}, "results": {q2}}}'
 
-    @app.route('/getrandom')
-    def getrandom():
+    @app.route('/get_random')
+    def get_random():
         """Return info for n random tracks from top m by feature."""
         feature = request.args.get('feature', default='popularity', type=str)
         num = request.args.get('num', default=10, type=int)
