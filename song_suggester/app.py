@@ -193,7 +193,6 @@ def create_app():
         elif max_range:
             condition = f'Track.{audio_feature} <= max_range'
             tracks = Track.query.filter(eval(condition)).limit(max_limit).all()
-        print(len(tracks))
 
         return str(tracks)
 
