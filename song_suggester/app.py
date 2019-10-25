@@ -180,18 +180,19 @@ def create_app():
                                          type=str)
         min_range = request.args.get('min', type=float)
         max_range = request.args.get('max', type=float)
+        max_limit = request.args.get('limit', default=200, type=int)
 
         tracks = {}
         if min_range and max_range:
             condition = (f'(Track.{audio_feature} >= min_range) & '
                          f'(Track.{audio_feature} <= max_range)')
-            tracks = Track.query.filter(eval(condition)).limit(200).all()
+            tracks = Track.query.filter(eval(condition)).limit(max_limit).all()
         elif min_range:
             condition = f'Track.{audio_feature} >= min_range'
-            tracks = Track.query.filter(eval(condition)).limit(200).all()
+            tracks = Track.query.filter(eval(condition)).limit(max_limit).all()
         elif max_range:
             condition = f'Track.{audio_feature} <= max_range'
-            tracks = Track.query.filter(eval(condition)).limit(200).all()
+            tracks = Track.query.filter(eval(condition)).limit(max_limit).all()
         print(len(tracks))
 
         return str(tracks)
