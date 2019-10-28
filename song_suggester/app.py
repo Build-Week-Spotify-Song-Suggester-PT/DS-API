@@ -1,3 +1,19 @@
+"""The data processing and prediction backend for the Songsight app.
+
+Routes returning track information, given a Spotify track id:
+    track (basic info)
+    audio_features (audio details)
+
+Routes returning tracks:
+    get_range (given min & max values for a particular feature)
+    get_random (from the top or bottom n tracks for a specified feature)
+    get_like (given a seed track for similarity measurement)
+
+Routes returning visualizations:
+    compare (given two track ids)
+
+"""
+
 import io
 import json
 import numpy as np
@@ -16,24 +32,33 @@ from matplotlib.figure import Figure
 
 
 def create_app():
-    client_id = config('CLIENT_ID')
-    client_secret = config('CLIENT_SECRET')
 
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
-    DB = SQLAlchemy(app)
-    DB.Model.metadata.reflect(DB.engine)
+
+    # Spotify API authentication details.
+    client_id = config('CLIENT_ID')
+    client_secret = config('CLIENT_SECRET')
 
     credentials = oauth2.SpotifyClientCredentials(
             client_id=client_id,
             client_secret=client_secret)
 
+    # Backend database location and associated metadata.
+    app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
+    DB = SQLAlchemy(app)
+    DB.Model.metadata.reflect(DB.engine)
+
+    # KDTree for finding 'k nearest neighbor' tracks. Loaded from file.
     tree = pickle.load(open('tree.p', 'rb'))
 
     class Track(DB.Model):
         __table__ = DB.Model.metadata.tables['track']
 
         def to_array(self):
+            """
+            Returns a numpy array with only those features used by the KDTree
+            to evaluate track similarity.
+            """
             return np.array([self.acousticness_scaled,
                              self.danceability_scaled,
                              self.duration_ms_scaled,
@@ -125,6 +150,10 @@ def create_app():
                              self.worship_super])
 
         def to_dict(self):
+            """
+            Returns a dictionary with only the fields from the original
+            Kaggle dataset. Primarily for display purposes.
+            """
             return {'track_id': self.track_id,
                     'track_name': self.track_name,
                     'artist_name': self.artist_name,
@@ -149,11 +178,21 @@ def create_app():
     @app.route('/')
     def root():
         """Base view."""
-        return 'Hello, world!'
+        return 'Welcome to the data science backend for the SongSight app!'
 
     @app.route('/track')
     def track():
-        """Return basic track info."""
+        """
+        A wrapper for the Spotify tracks endpoint. Returns basic track info.
+
+        Args:
+            track: The Spotify track id whose information is sought.
+
+        Returns:
+            On success - a json object containing the relevant details (album,
+            artists, available markets, etc.).
+            On failure - a server error.
+        """
         token = credentials.get_access_token()
         spotify = spotipy.Spotify(auth=token)
         track_id = request.args.get('track',
@@ -164,7 +203,24 @@ def create_app():
 
     @app.route('/audio_features')
     def audio_features():
-        """Return audio features for track."""
+        """
+        A wrapper for the Spotify audio-features endpoint. Returns audio
+        features for track.
+
+        Args:
+            track: The Spotify track id whose features are sought.
+
+        Returns:
+            On success - the string representation of a list containing a
+            single json object with the track's audio features.
+            On failure - the string representation of a list of one or more
+            null objects.
+
+        Note:
+            The underlying Spotipy method used here will take a list of track
+            ids as an argument; this route could be extended to take
+            advantage of that.
+        """
         token = credentials.get_access_token()
         spotify = spotipy.Spotify(auth=token)
         track_id = request.args.get('track',
@@ -175,6 +231,26 @@ def create_app():
 
     @app.route('/get_range')
     def get_range():
+        """
+        Retrieves tracks matching a specified range of values for a single
+        audio (or other) feature.
+
+        Args:
+            audio_feature: the feature on which to filter
+            min: the minimum desired value for that audio feature
+            max: the maximum desired value for the same audio feature
+            limit: the maximum number of tracks to return
+
+        Returns:
+            On success: The string representation of a list of dictionaries
+            containing the track info for each matching track found.
+            On failure: The string representation of an empty dictionary.
+
+        Note:
+            The successful execution of a query with 0 results is essentially
+            indistinguishable from an error here.
+
+        """
         audio_feature = request.args.get('audio_feature',
                                          default='acousticness',
                                          type=str)
@@ -198,7 +274,7 @@ def create_app():
 
     @app.route('/get_like')
     def get_like():
-        """Return info for seed track and n nearest neighbors."""
+        """Returns info for seed track and n nearest neighbors."""
         seed = request.args.get('seed',
                                 default='0DpOKHtemH6UMhVGKXY6DJ',
                                 type=str)
