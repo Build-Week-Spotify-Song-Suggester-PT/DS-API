@@ -11,7 +11,6 @@ Routes returning tracks:
 
 Routes returning visualizations:
     compare (given two track ids)
-
 """
 
 import io
@@ -249,7 +248,6 @@ def create_app():
         Note:
             The successful execution of a query with 0 results is essentially
             indistinguishable from an error here.
-
         """
         audio_feature = request.args.get('audio_feature',
                                          default='acousticness',
@@ -274,7 +272,18 @@ def create_app():
 
     @app.route('/get_like')
     def get_like():
-        """Returns info for seed track and n nearest neighbors."""
+        """
+        Returns info for a seed track and its n nearest neighbors.
+
+        Args:
+            seed: the Spotify track_id of the seed track
+            num: the number of neighbor tracks to find
+
+        Returns:
+            On success: a json string with the track info for the seed track
+            and the results list of similar tracks.
+            On failure: a server error.
+        """
         seed = request.args.get('seed',
                                 default='0DpOKHtemH6UMhVGKXY6DJ',
                                 type=str)
@@ -291,7 +300,23 @@ def create_app():
 
     @app.route('/get_random')
     def get_random():
-        """Return info for n random tracks from top m by feature."""
+        """
+        Returns info for n random tracks from top m by feature.
+
+        Args:
+            feature: the feature on which tracks will be sorted
+            num: the number of tracks to return (n)
+            top: the number of tracks from which the returned tracks should be
+            picked (m)
+            order: 'asc' for ascending sort, to return a selection from the
+            bottom m tracks by feature. Otherwise defaults to descending order
+            and the top m tracks.
+
+        Returns:
+            On success: a json string with the track info for the query
+            results.
+            On failure: a server error.
+        """
         feature = request.args.get('feature', default='popularity', type=str)
         num = request.args.get('num', default=10, type=int)
         top = request.args.get('top', default=100, type=int)
@@ -311,7 +336,21 @@ def create_app():
 
     @app.route('/compare')
     def compare():
-        """Return a visual comparison of two tracks."""
+        """
+        Returns a visual comparison of two tracks.
+
+        Args:
+            label_a: a label for the first track (optional, defaults to
+            <artist> - <title>).
+            label_b: a label for the second track (optional, defaults to
+            <artist> - <title>).
+            track_a: the Spotify id for the first track.
+            track_b: the Spotify id for the second track.
+
+        Returns:
+            On success: an svg image comparing the two tracks selected.
+            On failure: a server error.
+        """
         label_a = request.args.get('label_a', default='', type=str)
         label_b = request.args.get('label_b', default='', type=str)
         track_a = request.args.get('track_a',
