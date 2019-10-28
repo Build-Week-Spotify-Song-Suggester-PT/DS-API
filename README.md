@@ -6,7 +6,7 @@ The data processing and prediction backend for the SongSight app, designed to fi
     track (basic info)
     audio_features (audio details)
 
-## Routes returning tracks:
+## Routes returning lists of tracks:
     get_range (given min & max values for a particular feature)
     get_random (from the top or bottom n tracks for a specified feature)
     get_like (given a seed track for similarity measurement)
